@@ -15,7 +15,18 @@ namespace YoutubeMusicDownloader
     {
         private static readonly YoutubeClient YoutubeClient = new YoutubeClient();
         private static readonly Cli FfmpegCli = new Cli("ffmpeg.exe");
-        private static readonly string OutputDir = Path.Combine(Directory.GetCurrentDirectory(), "Output");
+
+        private static readonly string TempDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
+        private static readonly string OutputDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Output");
+
+        private static MediaStreamInfo GetBestAudioStreamInfo(VideoInfo videoInfo)
+        {
+            if (videoInfo.AudioStreams.Any())
+                return videoInfo.AudioStreams.OrderBy(s => s.Bitrate).Last();
+            if (videoInfo.MixedStreams.Any())
+                return videoInfo.MixedStreams.OrderBy(s => s.VideoQuality).Last();
+            throw new Exception("No applicable media streams found for this video");
+        }
 
         private static async Task DownloadAndConvertVideoAsync(string id)
         {
@@ -23,36 +34,31 @@ namespace YoutubeMusicDownloader
 
             // Get video info
             var videoInfo = await YoutubeClient.GetVideoInfoAsync(id);
+            string cleanTitle = videoInfo.Title.Except(Path.GetInvalidFileNameChars());
             Console.WriteLine($"{videoInfo.Title}");
 
             // Get highest bitrate audio-only or highest quality mixed stream
-            MediaStreamInfo streamInfo;
-            if (videoInfo.AudioStreams.Any())
-                streamInfo = videoInfo.AudioStreams.OrderBy(s => s.Bitrate).Last();
-            else if (videoInfo.MixedStreams.Any())
-                streamInfo = videoInfo.MixedStreams.OrderBy(s => s.VideoQuality).Last();
-            else
-                throw new Exception("No applicable media streams found for this video");
+            var streamInfo = GetBestAudioStreamInfo(videoInfo);
 
             // Download to temp file
-            Console.WriteLine("Downloading media stream...");
-            Directory.CreateDirectory(OutputDir);
-            string cleanTitle = videoInfo.Title.Except(Path.GetInvalidFileNameChars());
-            string streamExt = streamInfo.Container.GetFileExtension();
-            string tempFilePath = Path.Combine(OutputDir, $"{cleanTitle}.{streamExt}");
-            await YoutubeClient.DownloadMediaStreamAsync(streamInfo, tempFilePath);
+            Console.WriteLine("Downloading...");
+            Directory.CreateDirectory(TempDirectoryPath);
+            string streamFileExt = streamInfo.Container.GetFileExtension();
+            string streamFilePath = Path.Combine(TempDirectoryPath, $"{Guid.NewGuid()}.{streamFileExt}");
+            await YoutubeClient.DownloadMediaStreamAsync(streamInfo, streamFilePath);
 
             // Convert to mp3
-            Console.WriteLine("Converting to mp3...");
-            string outFilePath = Path.Combine(OutputDir, $"{cleanTitle}.mp3");
-            await FfmpegCli.ExecuteAsync($"-i \"{tempFilePath}\" -q:a 0 -map a \"{outFilePath}\" -y");
+            Console.WriteLine("Converting...");
+            Directory.CreateDirectory(OutputDirectoryPath);
+            string outFilePath = Path.Combine(OutputDirectoryPath, $"{cleanTitle}.mp3");
+            await FfmpegCli.ExecuteAsync($"-i \"{streamFilePath}\" -q:a 0 -map a \"{outFilePath}\" -y");
 
             // Delete temp file
             Console.WriteLine("Deleting temp file...");
-            File.Delete(tempFilePath);
+            File.Delete(streamFilePath);
 
             // Edit mp3 metadata
-            Console.WriteLine("Writing ID3 tags...");
+            Console.WriteLine("Writing metadata...");
             var idMatch = Regex.Match(videoInfo.Title, @"^(?<artist>.*?)-(?<title>.*?)$");
             string artist = idMatch.Groups["artist"].Value.Trim();
             string title = idMatch.Groups["title"].Value.Trim();
@@ -63,7 +69,7 @@ namespace YoutubeMusicDownloader
                 meta.Save();
             }
 
-            Console.WriteLine($"Downloaded and converted video [{id}] to {outFilePath}");
+            Console.WriteLine($"Downloaded and converted video [{id}] to [{outFilePath}]");
         }
 
         private static async Task DownloadAndConvertPlaylistAsync(string id)
