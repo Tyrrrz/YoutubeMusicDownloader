@@ -34,7 +34,7 @@ namespace YoutubeMusicDownloader
 
             // Get video info
             var videoInfo = await YoutubeClient.GetVideoInfoAsync(id);
-            string cleanTitle = videoInfo.Title.Except(Path.GetInvalidFileNameChars());
+            var cleanTitle = videoInfo.Title.Except(Path.GetInvalidFileNameChars());
             Console.WriteLine($"{videoInfo.Title}");
 
             // Get highest bitrate audio-only or highest quality mixed stream
@@ -43,14 +43,14 @@ namespace YoutubeMusicDownloader
             // Download to temp file
             Console.WriteLine("Downloading...");
             Directory.CreateDirectory(TempDirectoryPath);
-            string streamFileExt = streamInfo.Container.GetFileExtension();
-            string streamFilePath = Path.Combine(TempDirectoryPath, $"{Guid.NewGuid()}.{streamFileExt}");
+            var streamFileExt = streamInfo.Container.GetFileExtension();
+            var streamFilePath = Path.Combine(TempDirectoryPath, $"{Guid.NewGuid()}.{streamFileExt}");
             await YoutubeClient.DownloadMediaStreamAsync(streamInfo, streamFilePath);
 
             // Convert to mp3
             Console.WriteLine("Converting...");
             Directory.CreateDirectory(OutputDirectoryPath);
-            string outFilePath = Path.Combine(OutputDirectoryPath, $"{cleanTitle}.mp3");
+            var outFilePath = Path.Combine(OutputDirectoryPath, $"{cleanTitle}.mp3");
             await FfmpegCli.ExecuteAsync($"-i \"{streamFilePath}\" -q:a 0 -map a \"{outFilePath}\" -y");
 
             // Delete temp file
@@ -60,8 +60,8 @@ namespace YoutubeMusicDownloader
             // Edit mp3 metadata
             Console.WriteLine("Writing metadata...");
             var idMatch = Regex.Match(videoInfo.Title, @"^(?<artist>.*?)-(?<title>.*?)$");
-            string artist = idMatch.Groups["artist"].Value.Trim();
-            string title = idMatch.Groups["title"].Value.Trim();
+            var artist = idMatch.Groups["artist"].Value.Trim();
+            var title = idMatch.Groups["title"].Value.Trim();
             using (var meta = TagLib.File.Create(outFilePath))
             {
                 meta.Tag.Performers = new[] {artist};
@@ -91,7 +91,7 @@ namespace YoutubeMusicDownloader
 
         private static async Task MainAsync(string[] args)
         {
-            foreach (string arg in args)
+            foreach (var arg in args)
             {
                 // Try to determine the type of the URL/ID that was given
 
