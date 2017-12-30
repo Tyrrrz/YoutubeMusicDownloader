@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CliWrap;
-using YoutubeExplode;
-using YoutubeExplode.Models;
 using Tyrrrz.Extensions;
+using YoutubeExplode;
 using YoutubeExplode.Models.MediaStreams;
 
 namespace YoutubeMusicDownloader
@@ -19,12 +18,12 @@ namespace YoutubeMusicDownloader
         private static readonly string TempDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
         private static readonly string OutputDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Output");
 
-        private static MediaStreamInfo GetBestAudioStreamInfo(VideoInfo video)
+        private static MediaStreamInfo GetBestAudioStreamInfo(MediaStreamInfoSet set)
         {
-            if (video.AudioStreams.Any())
-                return video.AudioStreams.OrderBy(s => s.Bitrate).Last();
-            if (video.MixedStreams.Any())
-                return video.MixedStreams.OrderBy(s => s.VideoQuality).Last();
+            if (set.Audio.Any())
+                return set.Audio.WithHighestBitrate();
+            if (set.Muxed.Any())
+                return set.Muxed.WithHighestVideoQuality();
             throw new Exception("No applicable media streams found for this video");
         }
 
@@ -33,12 +32,13 @@ namespace YoutubeMusicDownloader
             Console.WriteLine($"Working on video [{id}]...");
 
             // Get video info
-            var video = await YoutubeClient.GetVideoInfoAsync(id);
-            var cleanTitle = video.Title.Except(Path.GetInvalidFileNameChars());
+            var video = await YoutubeClient.GetVideoAsync(id);
+            var set = await YoutubeClient.GetVideoMediaStreamInfosAsync(id);
+            var cleanTitle = video.Title.Replace(Path.GetInvalidFileNameChars(), '_');
             Console.WriteLine($"{video.Title}");
 
             // Get highest bitrate audio-only or highest quality mixed stream
-            var streamInfo = GetBestAudioStreamInfo(video);
+            var streamInfo = GetBestAudioStreamInfo(set);
 
             // Download to temp file
             Console.WriteLine("Downloading...");
@@ -77,7 +77,7 @@ namespace YoutubeMusicDownloader
             Console.WriteLine($"Working on playlist [{id}]...");
 
             // Get playlist info
-            var playlist = await YoutubeClient.GetPlaylistInfoAsync(id);
+            var playlist = await YoutubeClient.GetPlaylistAsync(id);
             Console.WriteLine($"{playlist.Title} ({playlist.Videos.Count} videos)");
 
             // Work on the videos
@@ -102,7 +102,7 @@ namespace YoutubeMusicDownloader
                 }
 
                 // Playlist URL
-                else if (YoutubeClient.TryParsePlaylistId(arg, out string playlistId))
+                else if (YoutubeClient.TryParsePlaylistId(arg, out var playlistId))
                 {
                     await DownloadAndConvertPlaylistAsync(playlistId);
                 }
@@ -114,7 +114,7 @@ namespace YoutubeMusicDownloader
                 }
 
                 // Video URL
-                else if (YoutubeClient.TryParseVideoId(arg, out string videoId))
+                else if (YoutubeClient.TryParseVideoId(arg, out var videoId))
                 {
                     await DownloadAndConvertVideoAsync(videoId);
                 }
