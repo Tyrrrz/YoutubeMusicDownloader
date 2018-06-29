@@ -9,10 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CliWrap" Version="1.8.2" />
+    <PackageReference Include="CliWrap" Version="1.8.5" />
     <PackageReference Include="taglib" Version="2.1.0" />
-    <PackageReference Include="Tyrrrz.Extensions" Version="1.5.0" />
-    <PackageReference Include="YoutubeExplode" Version="4.1.0" />
+    <PackageReference Include="Tyrrrz.Extensions" Version="1.5.1" />
+    <PackageReference Include="YoutubeExplode" Version="4.2.8" />
   </ItemGroup>
 
   <ItemGroup>
