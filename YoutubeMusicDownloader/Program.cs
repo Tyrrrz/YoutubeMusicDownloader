@@ -13,7 +13,6 @@ namespace YoutubeMusicDownloader
     public class Program
     {
         private static readonly YoutubeClient YoutubeClient = new YoutubeClient();
-        private static readonly Cli FfmpegCli = new Cli("ffmpeg.exe");
 
         private static readonly string TempDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
         private static readonly string OutputDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Output");
@@ -51,7 +50,9 @@ namespace YoutubeMusicDownloader
             Console.WriteLine("Converting...");
             Directory.CreateDirectory(OutputDirectoryPath);
             var outputFilePath = Path.Combine(OutputDirectoryPath, $"{cleanTitle}.mp3");
-            await FfmpegCli.ExecuteAsync($"-i \"{streamFilePath}\" -q:a 0 -map a \"{outputFilePath}\" -y");
+            await new Cli("ffmpeg")
+                .SetArguments($"-i \"{streamFilePath}\" -q:a 0 -map a \"{outputFilePath}\" -y")
+                .EnableStandardErrorValidation(false).ExecuteAsync();
 
             // Delete temp file
             Console.WriteLine("Deleting temp file...");
