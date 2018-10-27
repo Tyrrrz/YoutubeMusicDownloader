@@ -1,30 +1,19 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using CliWrap;
 using Tyrrrz.Extensions;
 using YoutubeExplode;
-using YoutubeExplode.Models.MediaStreams;
+using YoutubeExplode.Converter;
 
 namespace YoutubeMusicDownloader
 {
     public class Program
     {
         private static readonly YoutubeClient YoutubeClient = new YoutubeClient();
+        private static readonly YoutubeConverter YoutubeConverter = new YoutubeConverter(YoutubeClient);
 
-        private static readonly string TempDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
         private static readonly string OutputDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Output");
-
-        private static MediaStreamInfo GetBestAudioStreamInfo(MediaStreamInfoSet set)
-        {
-            if (set.Audio.Any())
-                return set.Audio.WithHighestBitrate();
-            if (set.Muxed.Any())
-                return set.Muxed.WithHighestVideoQuality();
-            throw new Exception("No applicable media streams found for this video");
-        }
 
         private static async Task DownloadAndConvertVideoAsync(string id)
         {
@@ -32,31 +21,14 @@ namespace YoutubeMusicDownloader
 
             // Get video info
             var video = await YoutubeClient.GetVideoAsync(id);
-            var set = await YoutubeClient.GetVideoMediaStreamInfosAsync(id);
             var cleanTitle = video.Title.Replace(Path.GetInvalidFileNameChars(), '_');
             Console.WriteLine($"{video.Title}");
 
-            // Get highest bitrate audio-only or highest quality mixed stream
-            var streamInfo = GetBestAudioStreamInfo(set);
-
-            // Download to temp file
+            // Download video as mp3
             Console.WriteLine("Downloading...");
-            Directory.CreateDirectory(TempDirectoryPath);
-            var streamFileExt = streamInfo.Container.GetFileExtension();
-            var streamFilePath = Path.Combine(TempDirectoryPath, $"{Guid.NewGuid()}.{streamFileExt}");
-            await YoutubeClient.DownloadMediaStreamAsync(streamInfo, streamFilePath);
-
-            // Convert to mp3
-            Console.WriteLine("Converting...");
             Directory.CreateDirectory(OutputDirectoryPath);
             var outputFilePath = Path.Combine(OutputDirectoryPath, $"{cleanTitle}.mp3");
-            await new Cli("ffmpeg")
-                .SetArguments($"-i \"{streamFilePath}\" -q:a 0 -map a \"{outputFilePath}\" -y")
-                .EnableStandardErrorValidation(false).ExecuteAsync();
-
-            // Delete temp file
-            Console.WriteLine("Deleting temp file...");
-            File.Delete(streamFilePath);
+            await YoutubeConverter.DownloadVideoAsync(id, outputFilePath);
 
             // Edit mp3 metadata
             Console.WriteLine("Writing metadata...");

@@ -28,7 +28,7 @@ Or even combine playlists with videos:
 ## Libraries used
 
 - [YoutubeExplode](https://github.com/Tyrrrz/YoutubeExplode)
-- [CliWrap](https://github.com/Tyrrrz/CliWrap)
+- [YoutubeExplode.Converter](https://github.com/Tyrrrz/YoutubeExplode.Converter)
 - [Taglib](https://github.com/mono/taglib-sharp)
 - [Tyrrrz.Extensions](https://github.com/Tyrrrz/Extensions)
 
