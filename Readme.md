@@ -1,6 +1,8 @@
 # YoutubeMusicDownloader
 
-Command line executable that can download and convert Youtube videos or entire playlists into mp3 files.
+Command line executable that can download and convert YouTube videos or entire playlists into mp3 files.
+
+*This project is obsoleted by [YoutubeDownloader](https://github.com/Tyrrrz/YoutubeDownloader) - a GUI application to download YouTube videos.* This repository will be removed soon.
 
 ## Download
 
